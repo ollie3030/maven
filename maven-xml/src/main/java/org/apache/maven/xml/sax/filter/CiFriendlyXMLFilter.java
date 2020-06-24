@@ -21,6 +21,7 @@ package org.apache.maven.xml.sax.filter;
 
 import java.util.function.Function;
 
+import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
 /**
@@ -30,9 +31,25 @@ import org.xml.sax.SAXException;
  * @since 3.7.0
  */
 class CiFriendlyXMLFilter
-    extends AbstractSAXFilter
+    extends AbstractEventXMLFilter
 {
     private Function<String, String> replaceChain = Function.identity();
+    
+    private String characters; 
+    
+    private boolean parsing = false;
+
+    @Override
+    protected boolean isParsing()
+    {
+        return parsing;
+    }
+
+    @Override
+    protected String getState()
+    {
+        return null;
+    }
     
     public CiFriendlyXMLFilter setChangelist( String changelist )
     {
@@ -64,20 +81,157 @@ class CiFriendlyXMLFilter
     public void characters( char[] ch, int start, int length )
         throws SAXException
     {
-        String text = new String( ch, start, length );
+        this.parsing = true;
+        this.characters = nullSafeAppend( characters, new String( ch, start, length ) );
+    }
 
-        // assuming this has the best performance
-        if ( text.contains( "${" ) )
+    @Override
+    public void comment( char[] ch, int start, int length )
+        throws SAXException
+    {
+        parseCharacters();
+        super.comment( ch, start, length );
+    }
+
+    @Override
+    public void endElement( String uri, String localName, String qName )
+        throws SAXException
+    {
+        parseCharacters();
+        super.endElement( uri, localName, qName );
+    }
+    
+    @Override
+    public void endCDATA()
+        throws SAXException
+    {
+        parseCharacters();
+        super.endCDATA();
+    }
+
+    @Override
+    public void endDocument()
+        throws SAXException
+    {
+        parseCharacters();
+        super.endDocument();
+    }
+
+    @Override
+    public void endDTD()
+        throws SAXException
+    {
+        parseCharacters();
+        super.endDTD();
+    }
+    
+    @Override
+    public void endEntity( String name )
+        throws SAXException
+    {
+        parseCharacters();
+        super.endEntity( name );
+    }
+    
+    @Override
+    public void endPrefixMapping( String prefix )
+        throws SAXException
+    {
+        parseCharacters();
+        super.endPrefixMapping( prefix );
+    }
+
+    @Override
+    public void skippedEntity( String name )
+        throws SAXException
+    {
+        parseCharacters();
+        super.skippedEntity( name );
+    }
+    
+    @Override
+    public void startCDATA()
+        throws SAXException
+    {
+        parseCharacters();
+        super.startCDATA();
+    }
+    
+    @Override
+    public void ignorableWhitespace( char[] ch, int start, int length )
+        throws SAXException
+    {
+        parseCharacters();
+        super.ignorableWhitespace( ch, start, length );
+    }
+    
+    @Override
+    public void processingInstruction( String target, String data )
+        throws SAXException
+    {
+        parseCharacters();
+        super.processingInstruction( target, data );
+    }
+    
+    @Override
+    public void startDocument()
+        throws SAXException
+    {
+        parseCharacters();
+        super.startDocument();
+    }
+    
+    @Override
+    public void startDTD( String name, String publicId, String systemId )
+        throws SAXException
+    {
+        parseCharacters();
+        super.startDTD( name, publicId, systemId );
+    }
+    
+    @Override
+    public void startElement( String uri, String localName, String qName, Attributes atts )
+        throws SAXException
+    {
+        parseCharacters();
+        super.startElement( uri, localName, qName, atts );
+    }
+    
+    @Override
+    public void startEntity( String name )
+        throws SAXException
+    {
+        parseCharacters();
+        super.startEntity( name );
+    }
+    
+    @Override
+    public void startPrefixMapping( String prefix, String uri )
+        throws SAXException
+    {
+        parseCharacters();
+        super.startPrefixMapping( prefix, uri );
+    }
+    
+    private void parseCharacters() throws SAXException
+    {
+        this.parsing = false;
+        if ( characters == null )
         {
-            String newText = replaceChain.apply( text );
-            
-            super.characters( newText.toCharArray(), 0, newText.length() );
+            return;
+        }
+        // assuming this has the best performance
+        if ( characters.contains( "${" ) )
+        {
+            char[] ch = replaceChain.apply( characters ).toCharArray();
+            super.characters( ch, 0, ch.length );
         }
         else
         {
-            super.characters( ch, start, length );
+            char[] ch = characters.toCharArray();
+            super.characters( ch, 0, ch.length );
         }
+        characters = null;
     }
-    
     
 }
